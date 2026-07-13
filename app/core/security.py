@@ -1,20 +1,22 @@
 from datetime import datetime, timedelta, timezone
 from typing import Dict, Any, Optional
 from jose import jwt, JWTError
-from passlib.context import CryptContext
+import hashlib
+import hmac
 from .config import settings
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return pwd_context.verify(plain_password, hashed_password)
+    """Verify a password against its hash"""
+    return get_password_hash(plain_password) == hashed_password
 
 def get_password_hash(password: str) -> str:
-    # Truncate password to 72 bytes for bcrypt
-    password_bytes = password.encode('utf-8')
-    if len(password_bytes) > 72:
-        password = password_bytes[:72].decode('utf-8', errors='ignore')
-    return pwd_context.hash(password)
+    """Hash a password using SHA256 with a salt"""
+    # Use the SECRET_KEY as salt
+    salt = settings.SECRET_KEY
+    # Combine salt and password
+    salted = salt + password
+    # Hash with SHA256
+    return hashlib.sha256(salted.encode('utf-8')).hexdigest()
 
 def create_access_token(data: Dict[str, Any], expires_delta: Optional[timedelta] = None) -> str:
     to_encode = data.copy()
